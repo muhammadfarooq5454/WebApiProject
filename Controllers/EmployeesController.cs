@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using WebApiProject.Data;
@@ -18,8 +19,9 @@ namespace WebApiProject.Controllers
             _employeeRepository = employeeRepository;
         }
 
+        [Authorize]
         [HttpPost]
-        public async Task<ActionResult> CreateUser([FromBody] Employees employee)
+        public async Task<ActionResult> AddEmployees([FromBody] Employees employee)
         {
             if (employee == null)
             {
@@ -31,6 +33,7 @@ namespace WebApiProject.Controllers
             return CreatedAtAction(nameof(GetUserById), new { id = employee.Id }, employee);
         }
 
+        [Authorize]
         [HttpGet("{id}")]
         public async Task<ActionResult<Employees>> GetUserById(int id)
         {
@@ -45,6 +48,7 @@ namespace WebApiProject.Controllers
             return employee;
         }
 
+        [Authorize]
         [HttpGet]
         public async Task<ActionResult<List<Employees>>> GetAllUsers()
         {
@@ -73,6 +77,8 @@ namespace WebApiProject.Controllers
             return NotFound(new {Message = "Employee Not Found" });            
         }
 
+
+        [Authorize(Roles = "Admin")]
         [HttpDelete]
         public async Task<IActionResult> DeleteEmployee(int id) 
         {
