@@ -84,5 +84,7 @@ namespace WebApiProject.Controllers
 
             return tokenHandler.WriteToken(token);
         }
+
+        //What is Remaining the remaining part will be authorizing the token so api works otherwise not
     }
 }
