@@ -1,10 +1,17 @@
-﻿namespace WebApiProject.Models
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace WebApiProject.Models
 {
     public class RegisterModel
     {
-        public string UserName { get; set; }
+        [Required]
+        public string Username { get; set; }
+
+        [Required]
+        [EmailAddress]
         public string Email { get; set; }
+
+        [Required]
         public string Password { get; set; }
-        public string Role { get; set; }
     }
 }

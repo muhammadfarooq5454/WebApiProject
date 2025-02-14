@@ -1,8 +1,13 @@
-﻿namespace WebApiProject.Models
+﻿using System.ComponentModel.DataAnnotations;
+
+namespace WebApiProject.Models
 {
     public class LoginModel
     {
-        public string UserName { get; set; }
+        [Required]
+        public string Username { get; set; }
+
+        [Required]
         public string Password { get; set; }
     }
 }

@@ -31,60 +31,52 @@ namespace WebApiProject.Controllers
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterModel model)
         {
-            var user = new IdentityUser { UserName = model.UserName, Email = model.Email };
-            //Creating the User with the password
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var user = new IdentityUser { UserName = model.Username, Email = model.Email };
             var result = await _userManager.CreateAsync(user, model.Password);
 
-            if (result.Succeeded)
-            {
-                await _userManager.AddToRoleAsync(user, model.Role); // Assign Role
-                return Ok(new { Message = "User registered successfully!" });
-            }
+            if (!result.Succeeded)
+                return BadRequest(result.Errors);
 
-            return BadRequest(result.Errors);
+            return Ok(new { message = "User registered successfully!" });
         }
 
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginModel model)
         {
-            var user = await _userManager.FindByNameAsync(model.UserName);
-            if (user != null && await _userManager.CheckPasswordAsync(user, model.Password))
-            {
-                var userRoles = await _userManager.GetRolesAsync(user);
-                var token = GenerateJwtToken(user, userRoles);
-                return Ok(new { Token = token });
-            }
-            return Unauthorized(new { Message = "Invalid username or password." });
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var user = await _userManager.FindByNameAsync(model.Username);
+            if (user == null || !(await _userManager.CheckPasswordAsync(user, model.Password)))
+                return Unauthorized(new { message = "Invalid credentials" });
+
+            var token = GenerateJwtToken(user);
+            return Ok(new { token });
         }
 
-        private string GenerateJwtToken(IdentityUser user, IList<string> userRoles)
+        private string GenerateJwtToken(IdentityUser user)
         {
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["JwtSettings:SecretKey"]));
-
-            var claims = new List<Claim>()
+            var jwtSettings = _configuration.GetSection("JwtSettings");
+            var key = Encoding.UTF8.GetBytes(jwtSettings["Key"]);
+            var claims = new[]
             {
-                new Claim(ClaimTypes.Name, user?.UserName ?? ""),
-                new Claim(ClaimTypes.Email, user?.Email ?? "")
+                new Claim(JwtRegisteredClaimNames.Sub, user.Id),
+                new Claim(JwtRegisteredClaimNames.UniqueName, user.UserName),
+                new Claim(JwtRegisteredClaimNames.Email, user.Email)
             };
 
-            // Add Role Claims
-            claims.AddRange(userRoles.Select(role => new Claim(ClaimTypes.Role, role)));
+            var token = new JwtSecurityToken(
+                issuer: jwtSettings["Issuer"],
+                audience: jwtSettings["Audience"],
+                claims: claims,
+                expires: DateTime.UtcNow.AddHours(2),
+                signingCredentials: new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256)
+            );
 
-            //Token Configuration
-            var tokenDescriptor = new SecurityTokenDescriptor
-            {
-                Subject = new ClaimsIdentity(claims),
-                Expires = DateTime.UtcNow.AddHours(1), // Token expiry
-                SigningCredentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256)
-            };
-
-            //Generate JWT Token
-            var tokenHandler = new JwtSecurityTokenHandler();
-            var token = tokenHandler.CreateToken(tokenDescriptor);
-
-            return tokenHandler.WriteToken(token);
+            return new JwtSecurityTokenHandler().WriteToken(token);
         }
-
-        //What is Remaining the remaining part will be authorizing the token so api works otherwise not
     }
 }
