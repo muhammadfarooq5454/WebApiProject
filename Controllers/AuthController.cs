@@ -8,8 +8,7 @@ using System.Security.Claims;
 using System.Text;
 using WebApiProject.Data;
 using WebApiProject.Models;
-using WebApiProject.Repositories;
-
+using WebApiProject.Services;
 
 namespace WebApiProject.Controllers
 {
@@ -17,25 +16,20 @@ namespace WebApiProject.Controllers
     [ApiController]
     public class AuthController : ControllerBase
     {
-        private readonly UserManager<IdentityUser> _userManager;
-        private readonly SignInManager<IdentityUser> _signInManager;
-        private readonly IConfiguration _configuration;
-
-        public AuthController(UserManager<IdentityUser> userManager, SignInManager<IdentityUser> signInManager, IConfiguration configuration)
+        private readonly AuthService _authService;
+        
+        public AuthController(AuthService authService)
         {
-            _userManager = userManager;
-            _signInManager = signInManager;
-            _configuration = configuration;
+            _authService = authService;
         }
 
         [HttpPost("register")]
-        public async Task<IActionResult> Register([FromBody] RegisterModel model)
+        public async Task<IActionResult> Register(RegisterModel model)
         {
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var user = new IdentityUser { UserName = model.Username, Email = model.Email };
-            var result = await _userManager.CreateAsync(user, model.Password);
+            var result = await _authService.Register(model);
 
             if (!result.Succeeded)
                 return BadRequest(result.Errors);
@@ -43,40 +37,8 @@ namespace WebApiProject.Controllers
             return Ok(new { message = "User registered successfully!" });
         }
 
-        [HttpPost("login")]
-        public async Task<IActionResult> Login([FromBody] LoginModel model)
-        {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
 
-            var user = await _userManager.FindByNameAsync(model.Username);
-            if (user == null || !(await _userManager.CheckPasswordAsync(user, model.Password)))
-                return Unauthorized(new { message = "Invalid credentials" });
 
-            var token = GenerateJwtToken(user);
-            return Ok(new { token });
-        }
 
-        private string GenerateJwtToken(IdentityUser user)
-        {
-            var jwtSettings = _configuration.GetSection("JwtSettings");
-            var key = Encoding.UTF8.GetBytes(jwtSettings["Key"]);
-            var claims = new[]
-            {
-                new Claim(JwtRegisteredClaimNames.Sub, user.Id),
-                new Claim(JwtRegisteredClaimNames.UniqueName, user.UserName),
-                new Claim(JwtRegisteredClaimNames.Email, user.Email)
-            };
-
-            var token = new JwtSecurityToken(
-                issuer: jwtSettings["Issuer"],
-                audience: jwtSettings["Audience"],
-                claims: claims,
-                expires: DateTime.UtcNow.AddHours(2),
-                signingCredentials: new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256)
-            );
-
-            return new JwtSecurityTokenHandler().WriteToken(token);
-        }
     }
 }

@@ -11,8 +11,6 @@ namespace WebApiProject.Data
         {
             
         }
-        public DbSet<Employees> Employees { get; set; }
-
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);
