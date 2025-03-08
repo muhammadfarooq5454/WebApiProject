@@ -37,7 +37,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(/*options =>
+builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new OpenApiInfo { Title = "Auth API", Version = "v1" });
 
@@ -65,8 +65,7 @@ builder.Services.AddSwaggerGen(/*options =>
             new string[] { }
         }
     });
-}
-    */);
+});
 
 var app = builder.Build();
 
