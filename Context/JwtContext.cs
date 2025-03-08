@@ -3,14 +3,16 @@ using WebApiProject.Models;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 
-namespace WebApiProject.Data
+namespace WebApiProject.Context
 {
-    public class ApplicationDbContext : IdentityDbContext<IdentityUser>
+    public class JwtContext : DbContext
     {
-        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
+        public JwtContext(DbContextOptions<JwtContext> options) : base(options)
         {
-            
         }
+        public DbSet<User> Users { get; set; }
+        public DbSet<Employees> Employees { get; set; }
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);

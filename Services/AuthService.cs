@@ -1,60 +1,72 @@
-﻿using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Configuration;
-using Microsoft.IdentityModel.Tokens;
+﻿using Microsoft.Extensions.Configuration;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using WebApiProject.Models;
 using Microsoft.AspNetCore.Http;
 using WebApiProject.Services;
+using WebApiProject.Interfaces;
+using WebApiProject.Request_Models;
+using WebApiProject.Context;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace WebApiProject.Services
 {
-    public class AuthService
+    public class AuthService : IAuthService
     {
-        private readonly UserManager<IdentityUser> _userManager;
-        private readonly SignInManager<IdentityUser> _signInManager;
+        private readonly JwtContext _jwtContext;
         private readonly IConfiguration _configuration;
-        private readonly string _SECRETKEY = "SuperSecretKey12345!@#$%^&*()_*68970";        
-
-        public AuthService(UserManager<IdentityUser> userManager, SignInManager<IdentityUser> signInManager, IConfiguration configuration)
+        public AuthService(JwtContext jwtContext, IConfiguration configuration)
         {
-            _userManager = userManager;
-            _signInManager = signInManager;
+            _jwtContext = jwtContext;
             _configuration = configuration;
         }
-
-        public async Task<IdentityResult> Register(RegisterModel model)
+        public User AddUser(User user)
         {
-            var user = new IdentityUser { UserName = model.Username, Email = model.Email };
-            var result = await _userManager.CreateAsync(user, model.Password);
-
-            return result;
+            var addeduser = _jwtContext.Users.Add(user);
+            _jwtContext.SaveChanges();
+            return addeduser.Entity;
         }
 
-        public string GenerateToken(string username)
+        public string Login(LoginRequest loginRequest)
         {
-            var claims = new[]
+            if(loginRequest.Username != null && loginRequest.Password != null)
             {
-                new Claim(JwtRegisteredClaimNames.Sub, username),
-                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-            };
+                var user = _jwtContext.Users.FirstOrDefault(x => x.Email == loginRequest.Username &&
+                    x.Password == loginRequest.Password);
 
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_SECRETKEY));
-            var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+                if (user != null)
+                {
+                    var claims = new[]
+                    {
+                        new Claim(JwtRegisteredClaimNames.Sub, _configuration["Jwt:Subject"]),
+                        new Claim("Id", user.Id.ToString()),
+                        new Claim("UserName",user.Name),
+                        new Claim("Email", user.Email)
+                    };
+                    var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]));
+                    var signIn = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
-            var token = new JwtSecurityToken(
-                issuer: _configuration.GetSection("JwtSettings")["Issuer"],
-                audience: _configuration.GetSection("JwtSettings")["Audience"],
-                claims: claims,
-                signingCredentials: credentials,
-                expires: DateTime.Now.AddHours(1)
-            );
-            return new JwtSecurityTokenHandler().WriteToken(token);
+                    var token = new JwtSecurityToken(
+                        _configuration["Jwt:Issuer"],
+                        _configuration["Jwt:Audience"],
+                        claims,
+                        expires: DateTime.UtcNow.AddMinutes(10),
+                        signingCredentials: signIn);
+
+                    var jwtToken = new JwtSecurityTokenHandler().WriteToken(token);
+                    return jwtToken;
+                }
+                else
+                {
+                    throw new Exception("Credentials are not Valid");
+                }
+            }
+            else
+            {
+                throw new Exception("User is not Valid");
+            }
         }
-
-
-
     }
 }

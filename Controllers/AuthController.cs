@@ -1,13 +1,14 @@
-﻿using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using WebApiProject.Data;
+using WebApiProject.Interfaces;
 using WebApiProject.Models;
+using WebApiProject.Request_Models;
 using WebApiProject.Services;
 
 namespace WebApiProject.Controllers
@@ -16,29 +17,23 @@ namespace WebApiProject.Controllers
     [ApiController]
     public class AuthController : ControllerBase
     {
-        private readonly AuthService _authService;
+        private readonly IAuthService _authService;
         
-        public AuthController(AuthService authService)
+        public AuthController(IAuthService authService)
         {
             _authService = authService;
         }
 
-        [HttpPost("register")]
-        public async Task<IActionResult> Register(RegisterModel model)
+        [HttpPost]
+        public string Login([FromBody] LoginRequest loginRequest)
         {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
-
-            var result = await _authService.Register(model);
-
-            if (!result.Succeeded)
-                return BadRequest(result.Errors);
-
-            return Ok(new { message = "User registered successfully!" });
+            return _authService.Login(loginRequest);
         }
 
-
-
-
+        [HttpPost("addUser")]
+        public User AddUser([FromBody] User value)
+        {
+            return _authService.AddUser(value);
+        }
     }
 }
