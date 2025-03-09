@@ -9,7 +9,7 @@ namespace WebApiProject.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize]
+    [Authorize(Roles = "Admin")]
     public class EmployeeController : ControllerBase
     {
         private readonly IEmployeeService _employeeService;

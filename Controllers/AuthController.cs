@@ -24,8 +24,8 @@ namespace WebApiProject.Controllers
             _authService = authService;
         }
 
-        [HttpPost]
-        public string Login([FromBody] LoginRequest loginRequest)
+        [HttpPost("login")]
+        public dynamic Login([FromBody] LoginRequest loginRequest)
         {
             return _authService.Login(loginRequest);
         }
@@ -34,6 +34,18 @@ namespace WebApiProject.Controllers
         public User AddUser([FromBody] User value)
         {
             return _authService.AddUser(value);
+        }
+
+        [HttpPost("addRole")]
+        public Role AddRole([FromBody] Role role)
+        {
+            return _authService.AddRole(role);
+        }
+
+        [HttpPost("assignRoleToUser")]
+        public bool AssignRoleToUser([FromBody] AddUserRole addUserRole)
+        {
+            return _authService.AssignRoletoUser(addUserRole);
         }
     }
 }

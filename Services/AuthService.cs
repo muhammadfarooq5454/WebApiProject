@@ -22,6 +22,16 @@ namespace WebApiProject.Services
             _jwtContext = jwtContext;
             _configuration = configuration;
         }
+
+        //Adding roles in the Roles Table
+        public Role AddRole(Role role)
+        {
+            var addedrole = _jwtContext.Roles.Add(role);
+            _jwtContext.SaveChanges();
+            return addedrole.Entity;
+        }
+
+        //Adding user in the Users Table
         public User AddUser(User user)
         {
             var addeduser = _jwtContext.Users.Add(user);
@@ -29,22 +39,73 @@ namespace WebApiProject.Services
             return addeduser.Entity;
         }
 
-        public string Login(LoginRequest loginRequest)
+        //Assigning roles for a particular user in a userrole table 
+        public bool AssignRoletoUser(AddUserRole addUserRole)
+        {
+            try
+            {
+                var Listuserrole = new List<UserRole>();
+
+                var user = _jwtContext.Users.FirstOrDefault(x => x.Id == addUserRole.UserId);
+                if (user != null)
+                {
+                    foreach (var roleId in addUserRole.RoleIds)
+                    {
+                        var userrole = new UserRole()
+                        {
+                            RoleId = roleId,
+                            UserId = user.Id
+                        };
+
+                        Listuserrole.Add(userrole);
+                    }
+
+                    _jwtContext.UserRoles.AddRange(Listuserrole);
+                    _jwtContext.SaveChanges();
+                    return true;
+                }
+                else
+                {
+                    throw new Exception("User not Valid");
+                }
+            }
+            catch(Exception ex)
+            {
+                return false;
+            }
+        }
+
+        public dynamic Login(LoginRequest loginRequest)
         {
             if(loginRequest.Username != null && loginRequest.Password != null)
             {
-                var user = _jwtContext.Users.FirstOrDefault(x => x.Email == loginRequest.Username &&
+                var user = _jwtContext.Users.FirstOrDefault(x => x.Name == loginRequest.Username &&
                     x.Password == loginRequest.Password);
 
                 if (user != null)
                 {
-                    var claims = new[]
+                    var claims = new List<Claim>()
                     {
                         new Claim(JwtRegisteredClaimNames.Sub, _configuration["Jwt:Subject"]),
                         new Claim("Id", user.Id.ToString()),
                         new Claim("UserName",user.Name),
                         new Claim("Email", user.Email)
                     };
+
+                    //Adding Roles as a Claim in Token
+                    var userroles = _jwtContext.UserRoles.Where(x => x.UserId == user.Id).ToList();
+
+                    //Use particular user ki tamam roles ki ids agai hain
+                    var roleIds = userroles.Select(x => x.RoleId).ToList();
+
+                    //Ab in Ids ki behalf pe unke roles uthaonga
+                    var roles = _jwtContext.Roles.Where(x => roleIds.Contains(x.Id)).ToList();
+
+                    foreach(var role in roles)
+                    {
+                        claims.Add(new Claim(ClaimTypes.Role, role.Name));
+                    }
+
                     var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]));
                     var signIn = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
@@ -56,7 +117,7 @@ namespace WebApiProject.Services
                         signingCredentials: signIn);
 
                     var jwtToken = new JwtSecurityTokenHandler().WriteToken(token);
-                    return jwtToken;
+                    return new { token = jwtToken };
                 }
                 else
                 {
