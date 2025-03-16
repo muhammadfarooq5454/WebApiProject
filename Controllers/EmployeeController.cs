@@ -9,7 +9,6 @@ namespace WebApiProject.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize(Roles = "Admin")]
     public class EmployeeController : ControllerBase
     {
         private readonly IEmployeeService _employeeService;
@@ -18,6 +17,7 @@ namespace WebApiProject.Controllers
             _employeeService = employeeService;
         }
 
+        [Authorize(Roles = "User,Admin")]
         [HttpGet]
         public List<Employees> GetEmployees()
         {
@@ -25,6 +25,7 @@ namespace WebApiProject.Controllers
             return employees;
         }
 
+        [Authorize(Roles = "User,Admin")]
         [HttpGet("{id}")]
         public Employees GetEmployee(int id) 
         { 
@@ -32,6 +33,7 @@ namespace WebApiProject.Controllers
             return employee;
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpPost]
         public Employees AddEmployee([FromBody] Employees employees)
         {
@@ -39,6 +41,7 @@ namespace WebApiProject.Controllers
             return employee;
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpPut("{id}")]
         public Employees UpdateEmployee([FromBody] Employees value)
         {
@@ -46,6 +49,7 @@ namespace WebApiProject.Controllers
             return employee;
         }
 
+        [Authorize(Roles = "Admin")]
         [HttpDelete("{id}")]
         public bool DeleteEmployee(int id)
         {
